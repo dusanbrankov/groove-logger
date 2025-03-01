@@ -37,32 +37,30 @@ song_hist_table() {
     hxextract table <(song_hist_html) 2>/dev/null | grep -EA1 '<td>[0-9]{2}:[0-9]{2}:[0-9]{2}</td>' | tac
 }
 
-get_last_song() {
+last_saved_song() {
     tail -1 "$song_history" | awk '{print substr($0, index($0, $3))}'
 }
 
 printf 'Starting "Groove Salad" playlist recorder...\n\n'
 printf "%-21s %s\n" "Save song names to:" "$song_history"
-printf '%-21s "%s"\n' "Last saved:" "$(get_last_song)"
+printf '%-21s "%s"\n' "Last saved:" "$(last_saved_song)"
 printf "%-21s %s\n\n" "Currently saved:" "$(wc -l < "$song_history")"
 
 echo "Listening for songs..."
 
-t=0
-local_time=
+line_count=0
 song=
 while true; do
     while IFS= read -r line; do
         if grep ^- >/dev/null <<< "$line"; then
-            t=0
-            local_time=
+            line_count=0
             continue
         fi
         (( t++ ))
-        if (( t == 1 )); then
+        if (( line_count == 1 )); then
             song="$(sed -En 's:<td>(.*)</td><td>(.*)</td><td>.*$:\1 - \2:p' <<< "$line")"
         fi
-        if (( t == 2 )); then
+        if (( line_count == 2 )); then
             if [ -z "$song" ] || grep -F "$song" <(tail -30 "$song_history") >/dev/null; then
                 continue
             fi
