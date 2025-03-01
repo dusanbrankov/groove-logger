@@ -1,21 +1,37 @@
 #!/bin/bash
 
-song_history="$HOME/.radiopl"
+set -u
 
-if [ ! -f "$song_history" ] || [ ! -w "$song_history" ]; then
-    echo "Missing file or not writable: $song_history" >&2
+: "${SFM_LOG_DIR:=$HOME/sfm-groove-logger}"
+: "${SFM_CHECK_INTERVAL:=5m}"
+: "${SFM_CHANNELS:=groovesalad,gsclassic}"
+
+IFS=, read -ra CHANNELS <<< "$SFM_CHANNELS"
+
+error() { printf '%s\n' "$*" >&2; }
+
+if ! mkdir -p "$SFM_LOG_DIR"; then
+    error "Failed to create directory: $SFM_LOG_DIR"
     exit 1
 fi
+
+for channel in "${CHANNELS[@]}"; do
+    logfile="$SFM_LOG_DIR/$channel"
+    if ! test -f "$logfile" && ! touch "$logfile"; then
+        error "Failed to write to $logfile"
+        exit 1
+    fi
+done
 
 if ! command -v hxextract >/dev/null; then
-    echo "Missing command: hxextract" <&2
-    echo "This command is included in the 'html-xml-utils' package"
+    error "Missing command: hxextract"
+    printf "The command is included in the 'html-xml-utils' package\n"
     exit 1
 fi
 
-song_hist_html() {
+playlist_html() {
     local url html max_retries
-    url=https://somafm.com/groovesalad/songhistory.html
+    url="https://somafm.com/$1/songhistory.html"
     html="$(curl --max-time 10 -Lfs "$url")"
     max_retries=5
 
@@ -23,53 +39,62 @@ song_hist_html() {
         (( retries = max_retries - i - 1 ))
         test -n "$html" && break
         if (( retries == 0 )); then
-            echo "Failed to get song, exiting script" >&2
+            error "Failed to get song, exiting script"
             exit 1
         fi
-        echo "Couldn't get song, retrying ($retries left)..." >&2
+        error "Couldn't get song, retrying ($retries left)..."
         sleep 10
     done
 
     printf '%s' "$html"
 }
 
-song_hist_table() {
-    hxextract table <(song_hist_html) 2>/dev/null | grep -EA1 '<td>[0-9]{2}:[0-9]{2}:[0-9]{2}</td>' | tac
+playlist_table() {
+    hxextract table <(playlist_html "$1") 2>/dev/null | grep -aEA1 '<td>[0-9]{2}:[0-9]{2}:[0-9]{2}.*</td>' | tac
 }
 
 last_saved_song() {
-    tail -1 "$song_history" | awk '{print substr($0, index($0, $3))}'
+    tail -1 "$SFM_LOG_DIR/$1" | awk '{print substr($0, index($0, $3))}'
 }
 
-printf 'Starting "Groove Salad" playlist recorder...\n\n'
-printf "%-21s %s\n" "Save song names to:" "$song_history"
-printf '%-21s "%s"\n' "Last saved:" "$(last_saved_song)"
-printf "%-21s %s\n\n" "Currently saved:" "$(wc -l < "$song_history")"
+printf 'Starting "SomaFM Groove Logger"...\n\n'
+printf "%-21s %s/\n" "Save song names in:" "$SFM_LOG_DIR"
+printf "%-21s %s\n" "Included channels:" "${SFM_CHANNELS//,/, }"
 
-echo "Listening for songs..."
+for channel in "${CHANNELS[@]}"; do
+    printf "\n%-21s %s\n" "Channel:" "$channel"
+    printf '%-21s "%s"\n' "Last saved:" "$(last_saved_song "$channel")"
+    printf "%-21s %s\n" "Currently saved:" "$(wc -l < "$SFM_LOG_DIR/$channel")"
+done
 
-line_count=0
-song=
+printf "\nListening...\n"
+
 while true; do
-    while IFS= read -r line; do
-        if grep ^- >/dev/null <<< "$line"; then
-            line_count=0
-            continue
-        fi
-        (( t++ ))
-        if (( line_count == 1 )); then
-            song="$(sed -En 's:<td>(.*)</td><td>(.*)</td><td>.*$:\1 - \2:p' <<< "$line")"
-        fi
-        if (( line_count == 2 )); then
-            if [ -z "$song" ] || grep -F "$song" <(tail -30 "$song_history") >/dev/null; then
+    line_count=0
+    song=
+    for channel in "${CHANNELS[@]}"; do
+        while IFS= read -r line; do
+            if grep ^- >/dev/null <<< "$line"; then
+                line_count=0
                 continue
             fi
-            utc8="$(sed -E 's/^.*<td.*>(..:..).*<\/td>.*$/\1/' <<< "$line")"
-            local_time="$(date -d "$utc8 UTC-8" +'%Y-%m-%d %R')"
-            echo "$local_time $song" | tee -a "$song_history"
-            song=
-        fi
-    done < <(song_hist_table)
+            (( line_count++ ))
+            if (( line_count == 1 )); then
+                song="$(sed -En 's:<td>(.*)</td><td>(.*)</td><td>.*$:\1 - \2:p' <<< "$line")"
+            fi
+            if (( line_count == 2 )); then
+                if test -z "$song" || grep -F "$song" <(tail -30 "$SFM_LOG_DIR/$channel") >/dev/null; then
+                    continue
+                fi
+                utc8="$(sed -E 's/^.*<td.*>(..:..).*<\/td>.*$/\1/' <<< "$line")"
+                local_time="$(date -d "$utc8 UTC-8" +'%Y-%m-%d %R')"
+                printf "%-21s %s\n" "$channel:" "$local_time $song"
+                printf "%s\n" "$local_time $song" >> "$SFM_LOG_DIR/$channel"
+                song=
+            fi
+        done < <(playlist_table "$channel")
+        sleep 1
+    done
 
-    sleep 10m
+    sleep "$SFM_CHECK_INTERVAL"
 done
