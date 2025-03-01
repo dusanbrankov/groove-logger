@@ -1,7 +1,5 @@
 #!/bin/bash
 
-trap 'echo "Exiting..."; exit 0' SIGINT SIGTERM
-
 song_history="$HOME/.radiopl"
 
 if [ ! -f "$song_history" ] || [ ! -w "$song_history" ]; then
