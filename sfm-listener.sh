@@ -3,20 +3,20 @@
 trap 'echo "Exiting..."; exit 0' SIGINT SIGTERM
 
 song_history="$HOME/.radiopl"
-conn_max_retries=5
 
 if [ ! -f "$song_history" ] || [ ! -w "$song_history" ]; then
     echo "Missing file or not writable: $song_history" >&2
     exit 1
 fi
 
-get_song_history() {
-    local url html
+song_hist_html() {
+    local url html max_retries
     url=https://somafm.com/groovesalad/songhistory.html
     html="$(curl --max-time 10 -Lfs "$url")"
+    max_retries=5
 
-    for (( i = 0; i < conn_max_retries; i++ )); do
-        (( retries = conn_max_retries - i - 1 ))
+    for (( i = 0; i < max_retries; i++ )); do
+        (( retries = max_retries - i - 1 ))
         test -n "$html" && break
         if (( retries == 0 )); then
             echo "Failed to get song, exiting script" >&2
@@ -27,12 +27,10 @@ get_song_history() {
     done
 
     printf '%s' "$html"
-    # cat /tmp/songhistory.html
 }
 
-get_recent_songs() {
-    hxextract table <(get_song_history) 2>/dev/null | grep -EA1 '<td>[0-9]{2}:[0-9]{2}:[0-9]{2}</td>'
-    # hxextract table <(get_song_history) 2>/dev/null | sed -En 's:<td>(.*)</td><td>(.*)</td><td>.*$:\1 - \2:p' | tac
+song_hist_table() {
+    hxextract table <(song_hist_html) 2>/dev/null | grep -EA1 '<td>[0-9]{2}:[0-9]{2}:[0-9]{2}</td>' | tac
 }
 
 get_last_song() {
@@ -46,13 +44,30 @@ printf "%-21s %s\n\n" "Currently saved:" "$(wc -l < "$song_history")"
 
 echo "Listening for songs..."
 
+t=0
+local_time=
+song=
 while true; do
-    while IFS= read -r song; do
-        if ! grep -F "$song" <(tail -30 "$song_history") >/dev/null; then
-            # if [ "$song" = ]
-            echo "$(date +"%Y-%m-%d %H:%M") $song" | tee -a "$song_history"
+    while IFS= read -r line; do
+        if grep ^- >/dev/null <<< "$line"; then
+            t=0
+            local_time=
+            continue
         fi
-    done < <(get_recent_songs)
+        (( t++ ))
+        if (( t == 1 )); then
+            song="$(sed -En 's:<td>(.*)</td><td>(.*)</td><td>.*$:\1 - \2:p' <<< "$line")"
+        fi
+        if (( t == 2 )); then
+            if [ -z "$song" ] || grep -F "$song" <(tail -30 "$song_history") >/dev/null; then
+                continue
+            fi
+            utc8="$(sed -E 's/^.*<td.*>(..:..).*<\/td>.*$/\1/' <<< "$line")"
+            local_time="$(date -d "$utc8 UTC-8" +'%Y-%m-%d %R')"
+            echo "$local_time $song" | tee -a "$song_history"
+            song=
+        fi
+    done < <(song_hist_table)
 
-    sleep 20m
+    sleep 10m
 done
