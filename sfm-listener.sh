@@ -7,6 +7,12 @@ if [ ! -f "$song_history" ] || [ ! -w "$song_history" ]; then
     exit 1
 fi
 
+if ! command -v hxextract >/dev/null; then
+    echo "Missing command: hxextract" <&2
+    echo "This command is included in the 'html-xml-utils' package"
+    exit 1
+fi
+
 song_hist_html() {
     local url html max_retries
     url=https://somafm.com/groovesalad/songhistory.html
