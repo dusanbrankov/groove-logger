@@ -39,7 +39,7 @@ These are the environment variables with their default values used in the script
 
 ```sh
 # Path to the directory for storing the song history
-SFM_LOG_DIR=~/sfm-groove-logger
+SFM_LOG_DIR=~/groove-logger
 
 # Interval at which the song history is updated
 # Suffix may be 's' for seconds, 'm' for minutes, 'h' for hours or 'd' for days
@@ -54,7 +54,7 @@ All available channels are listed on [SomaFM.com](https://somafm.com/). To log t
 For example, to follow only the [SF 10-33](https://somafm.com/sf1033/) and [Fluid](https://somafm.com/fluid/) channels:
 
 ```sh
-SFM_CHANNELS=sf1033,fluid ./groove-logger.sh
+SFM_CHANNELS=sf1033,fluid groove-logger
 ```
 
 > [!NOTE]
