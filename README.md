@@ -57,7 +57,8 @@ For example, to follow only the [SF 10-33](https://somafm.com/sf1033/) and [Flui
 SFM_CHANNELS=sf1033,fluid ./groove-logger.sh
 ```
 
-Note that the channel names **must match the last URL path segment of the links**, e.g. "sf1033" is taken from "https://somafm.com/sf1033/".
+> [!NOTE]
+> The channel names *must match the last URL path segment of the links*, e.g. `sf1033` is taken from `https://somafm.com/sf1033/`.
 
 The environment variables can also be set in your shell configuration file, for example:
 
