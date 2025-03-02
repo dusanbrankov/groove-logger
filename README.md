@@ -13,7 +13,7 @@ This is a Bash script to log and track the recent song history of selected [Soma
 sudo apt install -y html-xml-utils
 ```
 
-2. Clone this repository and make the script executable. Optionally, move it to one of your `PATH` directories for easy access:
+2. Clone this repository and make the script executable.
 
 ```sh
 git clone https://github.com/dusanbrankov/groove-logger.git
@@ -21,7 +21,7 @@ cd groove-logger
 chmod u+x groove-logger.sh
 ```
 
-3. Make the script executable and move it to one of your `PATH` directories for easy access:
+3. Move the script to one of your `PATH` directories for easy access:
 
 ```sh
 sudo mv groove-logger.sh /usr/local/bin/groove-logger
