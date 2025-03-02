@@ -70,7 +70,9 @@ export SFM_CHANNELS=groovesalad,gsclassic,fluid
 
 ## Groove Player
 
-I got the idea to log SomaFM songs after I created a small function to play and switch between my favorite radio channels using `vlc` and `fzf`. Feel free to use or modify it if you like.
+To play and switch between radio channels from the command line, I added the following function to my `.bashrc` using `vlc` and `fzf`. It can be especially useful when running the player remotely.
+
+Feel free to use or modify it.
 
 ```bash
 groove-player() {
@@ -91,5 +93,6 @@ groove-player() {
     printf "Playing: %s\n" "$choice"
     cvlc "$url"
 }
-bind -x '"\ep":"playradio"' # Usage: <alt-p>
+# Usage: <Alt-p>
+bind -x '"\ep":"groove-player"' 
 ```
