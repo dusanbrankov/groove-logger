@@ -2,7 +2,7 @@
 
 set -u
 
-: "${SFM_LOG_DIR:=$HOME/sfm-groove-logger}"
+: "${SFM_LOG_DIR:=$HOME/groove-logger}"
 : "${SFM_CHECK_INTERVAL:=5m}"
 : "${SFM_CHANNELS:=groovesalad,gsclassic}"
 
