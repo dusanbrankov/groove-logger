@@ -67,3 +67,29 @@ export SFM_LOG_DIR=~/my-groove-logger
 export SFM_CHECK_INTERVAL=1h
 export SFM_CHANNELS=groovesalad,gsclassic,fluid
 ```
+
+## Groove Player
+
+I got the idea to log SomaFM songs after I created a small function to play and switch between my favorite radio channels using `vlc` and `fzf`. Feel free to use or modify it if you like.
+
+```bash
+groove-player() {
+    local stations choice url
+    stations=(
+        "Groove Salad: https://somafm.com/groovesalad130.pls"
+        "Groove Salad Cassic: https://somafm.com/gsclassic130.pls"
+        "Drone Zone: https://somafm.com/dronezone130.pls"
+        "Deep Space One: https://somafm.com/deepspaceone130.pls"
+        "Fluid: https://somafm.com/fluid130.pls"
+        "Varporwave: https://somafm.com/vaporwaves130.pls"
+        "SF 10-33: https://somafm.com/sf1033130.pls"
+        "DEF CON: https://somafm.com/defcon130.pls"
+    )
+    choice=$(printf '%s\n' "${stations[@]}" | fzf +m --disabled) || return
+    url="$(grep -o 'http.*' <<< "$choice")"
+
+    printf "Playing: %s\n" "$choice"
+    cvlc "$url"
+}
+bind -x '"\ep":"playradio"' # Usage: <alt-p>
+```
