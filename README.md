@@ -1,4 +1,4 @@
-# SomaFM Groove Logger
+# Groove Logger
 
 This is a Bash script to log and track the recent song history of selected [SomaFM.com](https://somafm.com/) radio channels: [Groove Salad](https://somafm.com/groovesalad/) and [Groove Salad Classic](https://somafm.com/gsclassic/). The channel list can be changed using the `SFM_CHANNELS` environment variable.
 
